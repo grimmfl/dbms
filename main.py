@@ -24,8 +24,9 @@ table_widget: QtWidgets.QTableWidget = window.findChild(QtWidgets.QTableWidget, 
 sql_widget: QtWidgets.QTextEdit = window.findChild(QtWidgets.QTextEdit, "sqlView")
 errors_widget: QtWidgets.QLineEdit = window.findChild(QtWidgets.QLineEdit, "errorsView")
 table_select_widget: QtWidgets.QComboBox = window.findChild(QtWidgets.QComboBox, "tableSelect")
+filter_input_widget: QtWidgets.QLineEdit = window.findChild(QtWidgets.QLineEdit, "filterInput")
 
-viewer = Viewer(db, table_widget, sql_widget, errors_widget, table_select_widget)
+viewer = Viewer(db, table_widget, sql_widget, errors_widget, table_select_widget, filter_input_widget)
 
 window.show()
 app.exec()

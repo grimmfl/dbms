@@ -49,13 +49,13 @@ class Query:
     def child(self) -> "Query":
         return self._child
 
-    #def where(self, filters: List[Dict[str, Any]]) -> "Query":
-    #    """
-    #    Creates a query with QueryOp = WHERE and appends itself as the child\n
-    #    :param filters: The filters to filter for. Dicts are linked with or, items in dict are linked with and.
-    #    :return: The where query
-    #    """
-    #    return Query(self._table, QueryOp.WHERE, filters, self)
+    def where(self, filters: str) -> "Query":
+        """
+        Creates a query with QueryOp = WHERE and appends itself as the child\n
+        :param filters: The filters to filter for. Dicts are linked with or, items in dict are linked with and.
+        :return: The where query
+        """
+        return Query(self._table, QueryOp.WHERE, filters, self)
 
     def resolve(self) -> str:
         """

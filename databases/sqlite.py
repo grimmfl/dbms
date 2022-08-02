@@ -17,16 +17,15 @@ class SqliteResolver(Resolver):
             if query.child is not None:
                 raise ValueError("Select query can not have a child.")
             return f"SELECT {','.join(query.param)} FROM {query.table.name}"
-        # elif query.op.value == QueryOp.WHERE.value:
-        #    if not isinstance(query.param, dict):
-        #        raise TypeError("Param for where query has to be of type dict.")
-        #    if query.child is None:
-        #        raise ValueError("Child for where query can not be None.")
-        #    if not query.child.op.value == QueryOp.SELECT.value:
-        #        raise ValueError("Child query has to have QueryOp = SELECT.")
-        #    select_sql = query.child.resolve()
-        #    filter_sql = [f"{key}={query.param[key]}" for key in query.param.keys()]
-        #    sql = f"{select_sql} WHERE {''}"
+        elif query.op.value == QueryOp.WHERE.value:
+            if not isinstance(query.param, str):
+                raise TypeError("Param for where query has to be of type str.")
+            if query.child is None:
+                raise ValueError("Child for where query can not be None.")
+            if not query.child.op.value == QueryOp.SELECT.value:
+                raise ValueError("Child query has to have QueryOp = SELECT.")
+            select_sql = query.child.resolve()
+            return f"{select_sql} WHERE {query.param}"
 
 
 class SqliteTable(Table):

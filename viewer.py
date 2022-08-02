@@ -3,7 +3,7 @@ from typing import List, Tuple, Callable
 from PyQt6 import QtWidgets
 
 import sql_helper
-from databases import Database
+from databases import Database, Query
 
 
 class Viewer:
@@ -12,7 +12,8 @@ class Viewer:
                  table_widget: QtWidgets.QTableWidget,
                  sql_widget: QtWidgets.QTextEdit,
                  errors_widget: QtWidgets.QLineEdit,
-                 table_select_widget: QtWidgets.QComboBox):
+                 table_select_widget: QtWidgets.QComboBox,
+                 filter_input_widget: QtWidgets.QLineEdit):
         """
         Initializes the viewer.\n
         :param database: The database object
@@ -21,41 +22,70 @@ class Viewer:
         :param errors_widget: The error text widget
         :param table_select_widget: The table select combo box widget
         """
+        self._table: str = ""
+        self._selection: str or List[str] = "*"
+        self._filter: str = None
+
         self._database: Database = database
         self._table_view: TableView = TableView(table_widget)
         self._sql_view: SqlView = SqlView(sql_widget, self.update_sql)
         self._errors_layout: ErrorsView = ErrorsView(errors_widget)
         self._table_select: TableSelect = TableSelect(table_select_widget, self.init_table)
+        self._filter_input: FilterInput = FilterInput(filter_input_widget, self._set_filter)
 
         self._table_select.set_tables(database.get_tables())
+
+    def build_query(self) -> Query:
+        """
+        Build the query.\n
+        """
+        table = self._database[self._table]
+        query = table.select(self._selection)
+        if self._filter is not None:
+            query = query.where(self._filter)
+        return query
+
+    def update_view(self, sql: str, set_sql: bool = True):
+        """
+        Update the view.\n
+        :param sql: The sql command
+        :param set_sql: Should the sql view be set?
+        """
+        try:
+            data = self._database.fetch(sql, ())
+        except Exception as error:
+            self._errors_layout.set(str(error))
+            return
+        columns = sql_helper.get_selected_columns(sql)
+        self._table_view.set_columns(columns)
+        self._table_view.set_data(data)
+        self._errors_layout.clear()
+        if set_sql:
+            self._sql_view.set_text(sql)
 
     def init_table(self, table_name: str):
         """
         Initializes the table with 'SELECT * FROM <table_name>'.\n
         :param table_name: The table name
         """
-        table = self._database[table_name]
-        columns = table.get_columns()
-        sql = table.select("*").resolve()
-        data = self._database.fetch(sql, ())
-
-        self._table_view.set_columns(columns)
-        self._table_view.set_data(data)
-        self._sql_view.set_text(sql)
+        self._table = table_name
+        self._selection = "*"
+        self._filter = None
+        self._filter_input.clear()
+        sql = self.build_query().resolve()
+        self.update_view(sql)
 
     def update_sql(self, sql: str):
         """
         Updates the table for a given sql command.\n
         :param sql: The sql command
         """
-        try:
-            data = self._database.fetch(sql, ())
-            selected_columns = sql_helper.get_selected_columns(sql)
-            self._table_view.set_columns(selected_columns)
-            self._table_view.set_data(data)
-            self._errors_layout.clear()
-        except Exception as error:
-            self._errors_layout.set(str(error))
+        self.update_view(sql, False)
+
+    def _set_filter(self, filters: str):
+        self._filter = filters
+        sql = self.build_query().resolve()
+        self.update_view(sql)
 
 
 class ErrorsView:
@@ -196,3 +226,21 @@ class TableSelect:
         """
         for i in range(0, self._widget.count()):
             self._widget.removeItem(0)
+
+
+class FilterInput:
+    def __init__(self, widget: QtWidgets.QLineEdit, update_fn: Callable[[str], None]):
+        """
+        Initializes the filter input.\n
+        :param widget: The filter input line edit
+        :param update_fn: The update function
+        """
+        self._widget: QtWidgets.QLineEdit = widget
+        self._update_fn: Callable[[str], None] = update_fn
+        self._widget.textEdited.connect(self._on_text_changed)
+
+    def _on_text_changed(self):
+        self._update_fn(self._widget.text())
+
+    def clear(self):
+        self._widget.setText("")
